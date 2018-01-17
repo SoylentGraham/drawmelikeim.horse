@@ -25,20 +25,38 @@
 		{
 			display:	block;
 			background:	red;
+			width:	100%;
 		}
+		
+		input[type=range]
+		{
+			margin-right:	25pt;
+		}
+		
+		input[type=range]:after
+		{
+			margin-right:	-20pt;
+			content:		attr(value);
+			color:			#000;
+			xposition:		absolute;
+			xright:			0px;
+		}
+		
+		
+		
 		</style>
 	</head>
 	<body>
 		<h1>Draw pixels for your oled display fun. Draw them. Now. Fun.</h1>
 		<div id=Meta>
-			<input type=text id=CanvasWidth value=64 />
-			<input type=text id=CanvasHeight value=64 />
+			<input type=range id=SpriteWidth min=1 max=128 value=64 oninput="this.setAttribute('value',this.value);" onchange=RedrawCanvas() />
+			<input type=range id=SpriteHeight min=1 max=64  value=64 oninput="this.setAttribute('value',this.value);" onchange=RedrawCanvas() />
 		</div>
 		
-		<div><canvas id=DisplayCanvas />
+		<div><canvas id=DisplayCanvas width=1024 height=1024 />
 			<script>
 				
-				var PixelData = new Array();
+				var SpriteData = new Array();
 				
 				function GetElement(Name)
 				{
@@ -51,28 +69,106 @@
 					return Element.value;
 				}
 			
-				function ResizeArray(Array,Length)
+				function ResizeArray(TheArray,Length,NewValue)
 				{
-					while ( Array.length < w )
-						Array.push( new Array(h) );
-					while ( Array.length > w )
-						Array.pop();
+					while ( TheArray.length < Length )
+						TheArray.push( NewValue );
+					while ( TheArray.length > Length )
+						TheArray.pop();
 				}
+			
+			
+			
+			
+			
 			
 				//	allocate/resize pixel data as needed
-				function GetPixelData()
+				function GetSpriteData()
 				{
-					var w = GetElementValue('CanvasWidth');
-					var h = GetElementValue('CanvasHeight');
+					var w = GetSpriteWidth();
+					var h = GetSpriteHeight();
 					
-					ResizeArray( PixelData, w );
+					ResizeArray( SpriteData, w, new Array() );
 					for ( var x=0;	x<w;	x++ )
-						ResizeArray( PixelData[x], h );
+						ResizeArray( SpriteData[x], h, 0 );
+						
+					return SpriteData;
 				}
 			
-				function DrawCanvasGrid(Canvas)
+				function GetSpriteWidth()
 				{
+					var w = GetElementValue('SpriteWidth');
+					return w;
+				}
+			
+				function GetSpriteHeight()
+				{
+					var h = GetElementValue('SpriteHeight');
+					return h;
+				}
+			
+				function DrawCanvasSquare(x,y,w,h,Colour,Context)
+				{
+					var cw = Context.canvas.width;
+					var ch = Context.canvas.height;
+					var sw = w;
+					var sh = h;
+					var GetUv = function(px,py)
+					{
+						return { 'x':px/sw, 'y':py/sh };
+					};
+					var GetPoint = function(uv)
+					{
+						return { 'x':uv.x*cw, 'y':uv.y*ch };
+					};
+					var RectPos = GetPoint( GetUv(x,y) );
+					var RectSize = GetPoint( GetUv(1,1) );
 					
+					if ( Colour === undefined )
+						throw "Colour is undefined";
+					Context.fillStyle = Colour;
+					Context.fillRect( RectPos.x, RectPos.y, RectSize.x, RectSize.y );
+				}
+			
+				function DrawCanvasGrid(Context)
+				{
+					let cw = Context.canvas.width;
+					let ch = Context.canvas.height;
+					let SpriteWidth = GetSpriteWidth();
+					let SpriteHeight = GetSpriteHeight();
+					let sw = SpriteWidth;
+					let sh = SpriteHeight;
+					
+					let GetUv = function(px,py)
+					{
+						return { 'x':px/sw, 'y':py/sh };
+					};
+					let GetPoint = function(uv)
+					{
+						return { 'x':uv.x*cw, 'y':uv.y*ch };
+					};
+					
+					var Colour = 'white';
+					Context.beginPath();
+					
+					for ( let x=1;	x<SpriteWidth;	x++ )
+					{
+						let Top = GetPoint( GetUv(x,0) );
+						let Bottom = GetPoint( GetUv(x,SpriteHeight) );
+						Context.moveTo( Top.x, Top.y );
+						Context.lineTo( Bottom.x, Bottom.y );
+					}
+					
+					for ( let y=1;	y<SpriteHeight;	y++ )
+					{
+						let Left = GetPoint( GetUv(0,y) );
+						let Right = GetPoint( GetUv(SpriteWidth,y) );
+						Context.moveTo( Left.x, Left.y );
+						Context.lineTo( Right.x, Right.y );
+					}
+					
+					Context.strokeStyle = Colour;
+					Context.stroke();
 				}
 			
 				function InitCanvas(Canvas)
@@ -82,12 +178,30 @@
 					var Context = Canvas.getContext('2d');
 					var Width = Canvas.width;
 					var Height = Canvas.height;
-					console.log(Width);
-					Context.fillStyle = '#000000';
+					Context.fillStyle = '#ffff00';
 					Context.fillRect(0,0,Width,Height);
 					
+					RedrawCanvas();
+				}
+			
+				function RedrawCanvas()
+				{
+					var Canvas = 'DisplayCanvas';
+					var Canvas = GetElement(Canvas);
+					var Context = Canvas.getContext('2d');
+					var SpriteData = GetSpriteData();
+					var SpriteWidth = GetSpriteWidth();
+					var SpriteHeight = GetSpriteHeight();
+					var Palette = {'0':'#cccccc', '1':'black'};
 					
-					DrawCanvasGrid( Canvas );
+					for ( let x=0;	x<SpriteData.length;	x++ )
+					for ( let y=0;	y<SpriteData[x].length;	y++ )
+					{
+						let Value = SpriteData[x][y];
+						DrawCanvasSquare( x,y, SpriteWidth, SpriteHeight, Palette[Value], Context );
+					}
+					
+					DrawCanvasGrid( Context );
 				}
 			
 				InitCanvas('DisplayCanvas');
