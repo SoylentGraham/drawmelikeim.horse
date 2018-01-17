@@ -1,0 +1,105 @@
+<!doctype html>
+<html>
+	<head>
+		<title>Draw me like I'm horse</title>
+		<style type=text/css>
+			
+			body
+			{
+				background-color:	#fff;
+				color:				#000;
+				font-family:		"futura-pt",sans-serif;
+				margin:				auto 10% auto 10%;
+			}
+		
+		h1
+		{
+			font-size:			30pt;
+			letter-spacing:		-2px;
+			font-weight:		600;
+			font-family:		"futura";
+			margin:				none;
+		}
+		
+		canvas
+		{
+			display:	block;
+			background:	red;
+		}
+		</style>
+	</head>
+	<body>
+		<h1>Draw pixels for your oled display fun. Draw them. Now. Fun.</h1>
+		<div id=Meta>
+			<input type=text id=CanvasWidth value=64 />
+			<input type=text id=CanvasHeight value=64 />
+		</div>
+		
+		<div><canvas id=DisplayCanvas />
+			<script>
+				
+				var PixelData = new Array();
+				
+				function GetElement(Name)
+				{
+					return document.getElementById(Name);
+				}
+			
+				function GetElementValue(Name)
+				{
+					var Element = GetElement(Name);
+					return Element.value;
+				}
+			
+				function ResizeArray(Array,Length)
+				{
+					while ( Array.length < w )
+						Array.push( new Array(h) );
+					while ( Array.length > w )
+						Array.pop();
+				}
+			
+				//	allocate/resize pixel data as needed
+				function GetPixelData()
+				{
+					var w = GetElementValue('CanvasWidth');
+					var h = GetElementValue('CanvasHeight');
+					
+					ResizeArray( PixelData, w );
+					for ( var x=0;	x<w;	x++ )
+						ResizeArray( PixelData[x], h );
+				}
+			
+				function DrawCanvasGrid(Canvas)
+				{
+					
+				}
+			
+				function InitCanvas(Canvas)
+				{
+					var Canvas = GetElement(Canvas);
+					
+					var Context = Canvas.getContext('2d');
+					var Width = Canvas.width;
+					var Height = Canvas.height;
+					console.log(Width);
+					Context.fillStyle = '#000000';
+					Context.fillRect(0,0,Width,Height);
+					
+					
+					DrawCanvasGrid( Canvas );
+				}
+			
+				InitCanvas('DisplayCanvas');
+				
+			</script>
+		</div>
+		
+		<div>
+			<div>Copy this. (fun)</div>
+			<textarea>const uint8_t Sprite = []{}</textarea>
+		</div>
+		
+	</body>
+</html>
+
