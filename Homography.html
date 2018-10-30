@@ -215,14 +215,8 @@
 				
 				Canvas.style.width = CanvasWidth + "px";
 				Canvas.style.height = CanvasHeight + "px";
-/*
-				let Ratio = 1;
-				let DomWidth =
-				//	update canvas' size with DOM size
-				//	todo: force aspect? or do it in shader
-				Canvas.width = Canvas.offsetWidth;
-				Canvas.height = Canvas.offsetHeight;
-				*/
+				let HorzSpace = Canvas.parentElement.offsetWidth - CanvasWidth;
+				Canvas.style.marginLeft = (HorzSpace/2) + "px";
 			}
 			
 			var ResizeCanvases = function()
