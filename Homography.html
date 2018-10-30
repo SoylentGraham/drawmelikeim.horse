@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Draw on stuff.</title>
+		<meta charset="utf-8" />
+		
+		<style type="text/css">
+			
+			body
+			{
+				background: url("PineappleBackground.jpg");
+				xxxbackground-color:	#0ff;
+				color:				#000;
+				font-family:		"futura-pt",sans-serif;
+				margin:				0px;
+				padding:			0px;
+				overflow:			hidden;
+			}
+		
+			h1
+			{
+				font-size:13vh;
+				line-height:14vh;
+				overflow:hidden;
+				width:100vw;
+				height:11vh;
+				vertical-align: text-bottom;
+				margin:0;
+				padding:0;
+			}
+		
+			.CanvasContainer
+			{
+				border: solid 0.0vmin transparent;
+				display:block;
+				width:80vw;
+				margin-left:10vw;
+			}
+		
+			#CanvasContainer
+			{
+				height:45vh;
+				margin-top:5vh;
+			}
+		
+			.CanvasContainer:hover
+			{
+				border-color: #000;
+			}
+		
+			#PosterContainer
+			{
+				height:30vh;
+				margin-top:5vh;
+			}
+		
+		</style>
+	</head>
+	<body>
+		<script src="PopWebgl/gl-matrix.js"></script>
+		<script src="PopWebgl/PopGl.js"></script>
+		<script src="PopWebgl/PopBlitter.js"></script>
+
+		<h1>Hello.</h1>
+		
+		<div class="CanvasContainer" id="CanvasContainer">
+			<canvas id="Canvas" width="1024" height="1024">
+				Canvas not supported
+			</canvas>
+		</div>
+		<div class="CanvasContainer" id="PosterContainer">
+			<canvas id="Poster" width="1024" height="1024">
+				Canvas not supported
+			</canvas>
+		</div>
+		<script>
+			
+			
+			var VertexShader = `
+			attribute vec2 a_position;
+			varying vec2 uv;
+			void main()
+			{
+				vec2 Pos2 = mix( vec2(-1,-1), vec2(1,1), a_position );
+				gl_Position = vec4(Pos2, 0.0, 1.0);
+				uv = vec2( a_position.x, 1.0-a_position.y);
+				
+				uv.x = mix( 0.0, 1.0, uv.x );
+				uv.y = mix( 0.0, 1.0, uv.y );
+			}
+		`;
+		
+		var FragShader_HomographyBlit = `
+		precision highp float;
+		varying vec2 uv;
+		uniform sampler2D CanvasTexture;
+		uniform sampler2D PosterTexture;
+		uniform mat4 Homography;
+		
+		void main()
+		{
+			vec3 Colour = texture2D( CanvasTexture, uv ).xyz;
+			vec4 PosterUv4 = vec4(uv.x,1.0-uv.y,0.0,1.0) * Homography;
+			vec2 PosterUv = PosterUv4.xy / PosterUv4.ww;
+			
+			//	alpha is for colour blend
+			vec4 PosterColour = vec4(1,0,0,0);
+			if ( PosterUv.x >= 0.0 && PosterUv.x <= 1.0 && PosterUv.y >= 0.0 && PosterUv.y <= 1.0 )
+			{
+				PosterColour.xyz = vec3(PosterUv,0);
+				PosterUv.y = 1.0-PosterUv.y;
+				PosterColour.xyz = texture2D( PosterTexture, PosterUv ).xyz;
+				PosterColour.w = 1.0;
+				
+				//	antialias edge
+				float AntialiasSize = 0.02;
+				vec2 EdgeDistance2 = 1.0 - (abs(PosterUv - 0.5) / 0.5);
+				float EdgeDistance = min( EdgeDistance2.x, EdgeDistance2.y );
+				PosterColour.w = smoothstep( 0.0, AntialiasSize, EdgeDistance );
+			}
+			Colour.xyz = mix( Colour.xyz, PosterColour.xyz, PosterColour.w );
+			gl_FragColor = vec4(Colour,1);
+		}
+		`;
+		
+		
+		
+		let MikeMeta =
+		{
+			"Canvas":	"Mike.jpg",
+			"Poster":	"Soup.jpg",
+			"PosterWidth":	0.5,
+			"PosterHeight":	0.3,
+			/*
+			"Homography":[-0.01516,0.00000,0.14478,
+						  0.32171,0.45849,0.00000,0.14585,
+						  0.00000,0.00000,1.00000,0.00000,
+						  0.62409,0.02194,0.00000,1.00000]
+			*/
+			
+			"Homography":[1.83984,0.07409,0.00000,-0.27717,
+						  -0.93223,2.15888,0.00000,-0.17991,
+						  0.00000,0.00000,1.00000,0.00000,
+						  -1.12777,-0.09360,0.00000,1.17693]
+			 
+		};
+		//MikeMeta.Poster = document.getElementById('Poster');
+
+		function ClearPoster()
+		{
+			let PosterCanvas = document.getElementById('Poster');
+			if ( PosterCanvas instanceof HTMLCanvasElement )
+			{
+				let Context = PosterCanvas.getContext("2d");
+				//	https://stackoverflow.com/a/41098122/355753
+				let w = Context.canvas.width;
+				let h = Context.canvas.height;
+				Context.clearRect(0, 0, w, h);
+				Context.fillStyle = 'rgba(255,255,255,255)';
+				Context.fillRect(0,0,w,h);
+			}
+		}
+
+		function LoadPosterImage(Url,OnLoaded)
+		{
+			const image = new Image();
+			image.crossOrigin = "anonymous";
+			let This = this;
+			image.onload = function()
+			{
+				OnLoaded(image);
+			};
+			//  trigger load
+			image.src = Url;
+		}
+
+
+		window.onload = function()	{	main( MikeMeta );	};
+
+		function main(Meta)
+		{
+			var Canvas = document.getElementById('Canvas');
+			var Poster = document.getElementById('Poster');
+			
+			var Context = new TContext( Canvas );
+			var Screen = new TScreen( Canvas );
+			
+			//	pre-configured size relative to the original image for the canvas and the ratio
+			Poster.GetRatio = function()
+			{
+				return MikeMeta.PosterWidth / MikeMeta.PosterHeight;
+			}
+
+			let PosterTexture = new TTexture("Poster");
+			
+			let OnPosterChanged = function()
+			{
+				PosterTexture.WritePixels(0,0,Poster);
+			}
+
+			var ResizeCanvas = function(Canvas)
+			{
+				//	lets keep canvas same size. resize it when image changes
+				let CanvasWidth = Canvas.parentElement.offsetWidth;
+				let CanvasHeight = Canvas.parentElement.offsetHeight;
+				let Ratio = Canvas.GetRatio ? Canvas.GetRatio() : null;
+				if ( !Ratio )
+					Ratio = 1;
+				
+				let CanvasRatio = CanvasWidth / CanvasHeight;
+				if( CanvasRatio > Ratio )
+					CanvasWidth *= Ratio / CanvasRatio;
+				else
+					CanvasHeight *= CanvasRatio /Ratio;
+				
+				Canvas.style.width = CanvasWidth + "px";
+				Canvas.style.height = CanvasHeight + "px";
+/*
+				let Ratio = 1;
+				let DomWidth =
+				//	update canvas' size with DOM size
+				//	todo: force aspect? or do it in shader
+				Canvas.width = Canvas.offsetWidth;
+				Canvas.height = Canvas.offsetHeight;
+				*/
+			}
+			
+			var ResizeCanvases = function()
+			{
+				ResizeCanvas( document.getElementById('Canvas') );
+				ResizeCanvas( document.getElementById('Poster') );
+			}
+			
+			var OnCanvasImageLoaded = function(CanvasTexture)
+			{
+				Canvas.GetRatio = function()
+				{
+					return CanvasTexture.GetWidth()/CanvasTexture.GetHeight();
+				}
+				Canvas.width = CanvasTexture.GetWidth();
+				Canvas.height = CanvasTexture.GetHeight();
+
+				//	resize the poster canvas to match the preconfigured size.
+				//	todo: preserve old image... but presumably the canvas loads before user does anything
+				Poster.width = CanvasTexture.GetWidth() * MikeMeta.PosterWidth;
+				Poster.height = CanvasTexture.GetHeight() * MikeMeta.PosterHeight;
+				ClearPoster();
+				ResizeCanvases();
+				//OnPosterChanged();
+			}
+			
+			let CanvasTexture = new TTexture("Canvas", Meta.Canvas, null, OnCanvasImageLoaded );
+			
+			let BlitPosterImage = function(Image)
+			{
+				let Context = Poster.getContext('2d');
+				
+				let SrcRect = [0,0,Image.width,Image.height];
+				let DstRect = [0,0,Poster.width,Poster.height];
+				
+				Context.drawImage(Image, SrcRect[0], SrcRect[1], SrcRect[2], SrcRect[3], DstRect[0], DstRect[1], DstRect[2], DstRect[3] );
+				OnPosterChanged();
+			}
+			LoadPosterImage( Meta.Poster, BlitPosterImage );
+			
+
+			// resize the canvas to fill browser window dynamically
+			window.addEventListener('resize', ResizeCanvases, false);
+			ResizeCanvases();
+			
+			
+			
+			let Shader = new TShader("Homography", VertexShader, FragShader_HomographyBlit );
+			
+			let ClearColour = new float4(0,0,0,1);
+			let Homography = new Matrix4x4( Meta.Homography );
+			
+			 let Blitter = new TBlitter("Blitter", FragShader_HomographyBlit );
+			 
+			 let SetUniforms = function(Shader,Geo)
+			 {
+				 Shader.SetUniform( 'CanvasTexture', CanvasTexture );
+				 Shader.SetUniform( 'PosterTexture', PosterTexture );
+				 Shader.SetUniform( 'Homography', Homography );
+			 };
+			 
+			 
+			 function Render()
+			 {
+				 try
+				 {
+					 Blitter.Render( Screen, SetUniforms );
+				 }
+				 catch(Exception)
+				 {
+					 //	rethrow
+					 throw Exception;
+				 }
+				 finally
+				 {
+					 //	always request redraw
+					 requestAnimationFrame( Render );
+				 }
+			 }
+			 
+			 Render();
+		}
+		
+		
+			</script></body>
+</html>
