@@ -179,6 +179,59 @@
 		}
 
 
+
+		//	add drag & drop to the
+		function EnableDragDrop(Element,OnDropped)
+		{
+			let OnDropping = function(Event)
+			{
+				Event.preventDefault();
+				console.log(Event);
+				
+				//let File = GetImageFile(Event);
+				if ( true )
+				{
+					//	set cursor good
+					//Element.style.cursor =
+				}
+				else
+				{
+					//	set cursor bad
+				}
+			}
+			
+			let OnDrop = function(Event)
+			{
+				Event.preventDefault();
+				
+				let Files = Event.dataTransfer.files;
+				let File = Files[0];
+				
+				let Reader = new FileReader();
+				let OnReadFile = function()
+				{
+					console.log(Reader.result);
+					OnDropped(Reader.result);
+				}
+				Reader.addEventListener('loadend',OnReadFile);
+				console.log(File);
+				Reader.readAsDataURL(File);
+			}
+			
+			let Cancel = function(Event)
+			{
+				Event.preventDefault();
+			}
+			
+			window.addEventListener('dragenter', Cancel, false );
+			window.addEventListener('dragover', Cancel, false );
+			window.addEventListener('drop', Cancel, false );
+			Element.addEventListener('dragenter', OnDropping, false );
+			Element.addEventListener('dragover', Cancel, false );
+			Element.addEventListener('drop', OnDrop, false );
+		}
+		
+
 		window.onload = function()	{	main( MikeMeta );	};
 
 		function main(Meta)
@@ -265,7 +318,7 @@
 			// resize the canvas to fill browser window dynamically
 			window.addEventListener('resize', ResizeCanvases, false);
 			ResizeCanvases();
-			
+			EnableDragDrop( Poster, function(Url)	{	LoadPosterImage(Url,BlitPosterImage);	} );
 			
 			
 			let Shader = new TShader("Homography", VertexShader, FragShader_HomographyBlit );
