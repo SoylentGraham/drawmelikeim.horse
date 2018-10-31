@@ -73,17 +73,76 @@
 			{
 				position: absolute;
 				width:	10vmin;
-				height:	10vmin;
+				height:	20vmin;
 				bottom:	1vmin;
 				right:	1vmin;
-				background: red;
+				xbackground: red;
 			}
 		
-			.Tools button
-			{
-				width:	100%;
-				height:	100%;
-			}
+		.Tools #ColourPicker
+		{
+			cursor:		pointer;
+			display:	block;
+			width:		100%;
+			height:		70%;
+			border:		none;
+		}
+		
+		.Tools #BrushRadius
+		{
+			cursor:pointer;
+			display:block;
+			width:	100%;
+			margin-top: 5%;
+			height:	25%;
+		}
+		
+		/* remove default styles */
+		input[type=range]
+		{
+			-webkit-appearance: none;
+		}
+		
+		.Tools #BrushRadius
+		{
+			background:transparent;
+			margin:0;
+		}
+		
+		input[type=range]:focus {
+			outline: none;
+		}
+		.Tools #BrushRadius::-webkit-slider-thumb
+		{
+			--TrackBorder:	80%;
+			box-shadow: 0;
+			border: 0;
+			margin-top: -8%;
+			height: calc( 100% + var(--TrackBorder) + var(--TrackBorder) );
+			width: 30%;
+			border-radius: 20%;	/*curve*/
+			background: #00ddff;
+			cursor: pointer;
+			-webkit-appearance: none;
+		}
+		input[type=range]:focus::-webkit-slider-runnable-track
+		{
+			xbackground: #f00;
+		}
+		.Tools #BrushRadius::-webkit-slider-runnable-track
+		{
+			--TrackBorder:	40%;
+			margin-top:var(--TrackBorder);
+			margin-bottom:var(--TrackBorder);
+			padding-top:-20%;
+			width: 100%;
+			height: calc( 100% - var(--TrackBorder) - var(--TrackBorder) );
+			cursor: pointer;
+			box-shadow: 0;
+			background: #000000;
+			border-radius: 0;
+			border: 0;
+		}
 		
 		/*	https://leaverou.github.io/bubbly/	*/
 		 h3
@@ -167,6 +226,7 @@
 			<div class="Tools">
 				<h3 class=Small>Pick Colour</h3>
 				<button id="ColourPicker" class="jscolor {valueElement:null,value:'00ddff'}"></button>
+				<input type="Range" id="BrushRadius" min="2" max="100" value="5" />
 			</div>
 		</div>
 		</div>
@@ -323,9 +383,15 @@
 			Element.addEventListener('drop', OnDrop, false );
 		}
 		
+		function GetRadius()
+		{
+			let RadiusSlider = document.getElementById('BrushRadius');
+			return RadiusSlider.value;
+		}
+		
 		function DrawAt(Canvas,StartUv,EndUv,Colour)
 		{
-			let Radius = 3;
+			let Radius = GetRadius();
 			let Context = Canvas.getContext('2d');
 			let Startx = StartUv[0] * Canvas.width;
 			let Starty = StartUv[1] * Canvas.height;
@@ -397,7 +463,8 @@
 			
 			let OnDisableDraw = function(MouseEvent)
 			{
-				Draw(MouseEvent);
+				if ( IsDrawing() )
+					Draw(MouseEvent);
 				Canvas.LastDrawPos = null;
 			}
 			
