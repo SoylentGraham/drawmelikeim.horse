@@ -117,7 +117,7 @@
 		
 		h3:hover
 		{
-			xxopacity: 0.0;
+			opacity: 0.0;
 			xxpointer-events: none;
 		}
 		
@@ -279,7 +279,6 @@
 			let OnDropping = function(Event)
 			{
 				Event.preventDefault();
-				console.log(Event);
 				
 				//let File = GetImageFile(Event);
 				if ( true )
@@ -324,23 +323,36 @@
 			Element.addEventListener('drop', OnDrop, false );
 		}
 		
-		function DrawAt(Canvas,uv,Colour)
+		function DrawAt(Canvas,StartUv,EndUv,Colour)
 		{
-			let Radius = 4;
+			let Radius = 3;
 			let Context = Canvas.getContext('2d');
-			let x = uv[0] * Canvas.width;
-			let y = uv[1] * Canvas.height;
+			let Startx = StartUv[0] * Canvas.width;
+			let Starty = StartUv[1] * Canvas.height;
+			let Endx = EndUv[0] * Canvas.width;
+			let Endy = EndUv[1] * Canvas.height;
 			Context.beginPath();
-			Context.arc( x, y, Radius, 2*Math.PI, false );
+			Context.lineWidth = Radius;
+			Context.strokeStyle = Colour;
+			Context.moveTo( Startx, Starty );
+			Context.lineTo( Endx, Endy );
+			Context.stroke();
+			
+			//	in case line is so small, draw a circle
+			Context.arc( Endx, Endy, Radius/2, 2*Math.PI, false );
 			Context.fillStyle = Colour;
+			Context.lineWidth = 0;
 			Context.fill();
-			//Context.lineWidth = 0;
-			//Context.stroke();
 		}
 		
 		function EnableDrawing(Canvas,ColourPicker,OnChanged)
 		{
-			let DrawButton = 1;	//	1=left, 0=no button check
+			let IsDrawButton = function(MouseEvent)
+			{
+				let LeftButton = 1;
+				return (MouseEvent.buttons & LeftButton) != 0;
+			}
+			
 			let GetColour = function()
 			{
 				return ColourPicker.jscolor.toRGBString();
@@ -348,30 +360,60 @@
 			}
 			
 			//	gr: if we just do mouse move/mouse down, we get gaps when moving the mouse quickly
-			//	todo: draw lines.
-			
-			let OnMouseMove = function(MouseEvent)
+			//	so, draw lines from last pos to new
+			//	when non-null, it's the last-drawn pos(uv). if null, not drawing
+			Canvas.LastDrawPos = null;
+			let IsDrawing = function()
 			{
-				if ( DrawButton != 0)
-					if ( (MouseEvent.buttons & DrawButton) == 0 )
-						return;
-					
+				return Canvas.LastDrawPos!==null;
+			}
+			
+			let GetUv = function(MouseEvent)
+			{
 				let CanvasRect = Canvas.getBoundingClientRect();
-				console.log("mouse");
-				console.log(CanvasRect);
-				console.log(Canvas.offsetLeft + ',' + Canvas.offsetTop);
-				console.log(MouseEvent.clientX + ',' + MouseEvent.clientY);
 				let x = MouseEvent.clientX - CanvasRect.left;
 				let y = MouseEvent.clientY - CanvasRect.top;
 				let uv = [ x/CanvasRect.width, y/CanvasRect.height ];
-				console.log( uv[0] + ',' +uv[1]);
-				DrawAt( Canvas, uv, GetColour() );
+				return uv;
+			}
+			
+			let Draw = function(MouseEvent)
+			{
+				//	get new uv
+				let EndPos = GetUv(MouseEvent);
+				let StartPos = IsDrawing() ? Canvas.LastDrawPos : EndPos;
+				console.log( EndPos[0] + ',' +EndPos[1]);
+				DrawAt( Canvas, StartPos, EndPos, GetColour() );
 				OnChanged();
+				Canvas.LastDrawPos = EndPos;
+			}
+			
+			let OnEnableDraw = function(MouseEvent)
+			{
+				if ( !IsDrawButton(MouseEvent) )
+					return;
+				Draw(MouseEvent);
+			}
+			
+			let OnDisableDraw = function(MouseEvent)
+			{
+				Draw(MouseEvent);
+				Canvas.LastDrawPos = null;
+			}
+			
+			let OnMouseMove = function(MouseEvent)
+			{
+				if ( !IsDrawing() )
+					return;
+				Draw(MouseEvent);
 			}
 		
 			//	handle events
-			Canvas.addEventListener('mousedown', OnMouseMove, false );
+			Canvas.addEventListener('mousedown', OnEnableDraw, false );
 			Canvas.addEventListener('mousemove', OnMouseMove, false );
+			Canvas.addEventListener('mouseup', OnDisableDraw, false );
+			Canvas.addEventListener('mouseleave', OnDisableDraw, false );
+			Canvas.addEventListener('mouseenter', OnEnableDraw, false );
 		}
 		
 		
