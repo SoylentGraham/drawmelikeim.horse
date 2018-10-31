@@ -137,6 +137,11 @@
 			margin-bottom: calc( var(--size) * -1 );
 		}
 		
+		#Poster
+		{
+			cursor: pointer;
+		}
+		
 		</style>
 	</head>
 	<body>
@@ -161,7 +166,7 @@
 			</canvas>
 			<div class="Tools">
 				<h3 class=Small>Pick Colour</h3>
-				<button class="jscolor {valueElement:null,value:'00ddff'}"></button>
+				<button id="ColourPicker" class="jscolor {valueElement:null,value:'00ddff'}"></button>
 			</div>
 		</div>
 		</div>
@@ -243,7 +248,7 @@
 			let PosterCanvas = document.getElementById('Poster');
 			if ( PosterCanvas instanceof HTMLCanvasElement )
 			{
-				let Context = PosterCanvas.getContext("2d");
+				let Context = PosterCanvas.getContext('2d');
 				//	https://stackoverflow.com/a/41098122/355753
 				let w = Context.canvas.width;
 				let h = Context.canvas.height;
@@ -319,11 +324,63 @@
 			Element.addEventListener('drop', OnDrop, false );
 		}
 		
+		function DrawAt(Canvas,uv,Colour)
+		{
+			let Radius = 4;
+			let Context = Canvas.getContext('2d');
+			let x = uv[0] * Canvas.width;
+			let y = uv[1] * Canvas.height;
+			Context.beginPath();
+			Context.arc( x, y, Radius, 2*Math.PI, false );
+			Context.fillStyle = Colour;
+			Context.fill();
+			//Context.lineWidth = 0;
+			//Context.stroke();
+		}
+		
+		function EnableDrawing(Canvas,ColourPicker,OnChanged)
+		{
+			let DrawButton = 1;	//	1=left, 0=no button check
+			let GetColour = function()
+			{
+				return ColourPicker.jscolor.toRGBString();
+				return '#000000';
+			}
+			
+			//	gr: if we just do mouse move/mouse down, we get gaps when moving the mouse quickly
+			//	todo: draw lines.
+			
+			let OnMouseMove = function(MouseEvent)
+			{
+				if ( DrawButton != 0)
+					if ( (MouseEvent.buttons & DrawButton) == 0 )
+						return;
+					
+				let CanvasRect = Canvas.getBoundingClientRect();
+				console.log("mouse");
+				console.log(CanvasRect);
+				console.log(Canvas.offsetLeft + ',' + Canvas.offsetTop);
+				console.log(MouseEvent.clientX + ',' + MouseEvent.clientY);
+				let x = MouseEvent.clientX - CanvasRect.left;
+				let y = MouseEvent.clientY - CanvasRect.top;
+				let uv = [ x/CanvasRect.width, y/CanvasRect.height ];
+				console.log( uv[0] + ',' +uv[1]);
+				DrawAt( Canvas, uv, GetColour() );
+				OnChanged();
+			}
+		
+			//	handle events
+			Canvas.addEventListener('mousedown', OnMouseMove, false );
+			Canvas.addEventListener('mousemove', OnMouseMove, false );
+		}
+		
+		
 
 		window.onload = function()	{	main( MikeMeta );	};
 
 		function main(Meta)
 		{
+			var EnableResize = true;
 			var Canvas = document.getElementById('Canvas');
 			var Poster = document.getElementById('Poster');
 			
@@ -343,7 +400,6 @@
 				PosterTexture.WritePixels(0,0,Poster);
 			}
 	
-	var EnableResize = true;
 
 			var ResizeCanvas = function(Canvas)
 			{
@@ -416,6 +472,8 @@
 			ResizeCanvases();
 			EnableDragDrop( Poster, function(Url)	{	LoadPosterImage(Url,BlitPosterImage);	} );
 			
+			let ColourPicker = document.getElementById('ColourPicker');
+			EnableDrawing(Poster, ColourPicker, OnPosterChanged);
 			
 			let Shader = new TShader("Homography", VertexShader, FragShader_HomographyBlit );
 			
