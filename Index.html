@@ -69,32 +69,61 @@
 				position:relative;	/* children's absolute positions are relative to me */
 			}
 		
+			.Tools
+			{
+				position: absolute;
+				width:	10vmin;
+				height:	10vmin;
+				bottom:	1vmin;
+				right:	1vmin;
+				background: red;
+			}
 		
+			.Tools button
+			{
+				width:	100%;
+				height:	100%;
+			}
 		
 		/*	https://leaverou.github.io/bubbly/	*/
 		 h3
 		 {
-			opacity: 0.8;
-			display:block;
-			margin:0;
-			padding:0;
-			font-size:2vh;
-			padding:20px;
-			position: absolute;
-			top: -4vh;
-			left: 2vmin;
-			background: #0df;
+			 --ShadowSize:	0.2vmin;
+			opacity: 	0.8;
+			display:	block;
+			margin:		0;
+			font-size:	2vmin;
+			padding:	2vmin;
+			position:	absolute;
+			top:		-4vmin;
+			left:		2vmin;
+			background:	#0df;
 			border-radius: 1vmin;
+			pointer-events: none;
+			/*-webkit-box-shadow: var(--ShadowSize) var(--ShadowSize) 0px 0px rgba(0,0,0,0.5);*/
+		}
+		
+		h3.Small
+		{
+			left:	-1vmin;
+			top: inherit;
+			top:	-10vmin;
+			xbottom:	0vmin;
+		}
+		h3.Small:after
+		{
+			right:	50%;
 		}
 		
 		h3:hover
 		{
-			opacity: 0.0;
+			xxopacity: 0.0;
+			xxpointer-events: none;
 		}
 		
 		h3:after
 		{
-			--size: 1.5vh;
+			--size: 1.5vmin;
 			content: '';
 			position: absolute;
 			bottom: 0;
@@ -130,9 +159,10 @@
 			<canvas id="Poster" width="10" height="10">
 				Canvas not supported
 			</canvas>
-			<!--<button
-				class="jscolor {valueElement:null,value:'00ddff'}"
-				style="width:50px; height:20px;"></button>-->
+			<div class="Tools">
+				<h3 class=Small>Pick Colour</h3>
+				<button class="jscolor {valueElement:null,value:'00ddff'}"></button>
+			</div>
 		</div>
 		</div>
 		<script>
